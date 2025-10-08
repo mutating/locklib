@@ -1,10 +1,7 @@
 from typing import Type, Optional, Any
 from types import TracebackType
 
-try:
-    from typing import Protocol, runtime_checkable
-except ImportError:  # pragma: no cover
-    from typing_extensions import Protocol, runtime_checkable  # type: ignore[assignment]
+from typing import Protocol, runtime_checkable
 
 from locklib.protocols.lock import LockProtocol
 
