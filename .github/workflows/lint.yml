@@ -22,6 +22,14 @@ jobs:
         shell: bash
         run: pip install -r requirements_dev.txt
 
+      - name: Run ruff
+        shell: bash
+        run: ruff check locklib
+
+      - name: Run ruff for tests
+        shell: bash
+        run: ruff check tests
+
       - name: Run mypy
         shell: bash
         run: mypy locklib --strict
@@ -33,11 +41,3 @@ jobs:
       - name: Run mypy in strict mode for protocols tests
         shell: bash
         run: mypy tests/units/protocols/ --strict
-
-      - name: Run ruff
-        shell: bash
-        run: ruff check locklib
-
-      - name: Run ruff for tests
-        shell: bash
-        run: ruff check tests
