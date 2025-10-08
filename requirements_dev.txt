@@ -1,4 +1,4 @@
-pytest==7.4.3
+pytest==8.0.2
 pytest-timeout==2.3.1
 coverage==7.6.1
 twine==6.1.0
@@ -7,4 +7,4 @@ build==1.2.2.post1
 ruff==0.9.9
 mypy==1.14.1
 mutmut==3.2.3
-full_match==0.0.2
+full_match==0.0.3
