@@ -5,7 +5,7 @@ from asyncio import Lock as ALock
 from contextlib import contextmanager
 
 import pytest
-import full_match
+from full_match import match
 
 from locklib import ContextLockProtocol, SmartLock
 
@@ -60,16 +60,16 @@ def test_not_implemented_methods_for_context_lock_protocol():  # type: ignore[no
     class ContextLockProtocolImplementation(ContextLockProtocol):
         pass
 
-    with pytest.raises(NotImplementedError, match=full_match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
         ContextLockProtocolImplementation().acquire()
 
-    with pytest.raises(NotImplementedError, match=full_match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
         ContextLockProtocolImplementation().release()
 
-    with pytest.raises(NotImplementedError, match=full_match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
         ContextLockProtocolImplementation().__enter__()
 
-    with pytest.raises(NotImplementedError, match=full_match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
         ContextLockProtocolImplementation().__exit__(None, None, None)
 
 

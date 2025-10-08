@@ -3,7 +3,7 @@ from threading import Lock as TLock, RLock as TRLock
 from asyncio import Lock as ALock
 
 import pytest
-import full_match
+from full_match import match
 
 from locklib import LockProtocol, SmartLock
 
@@ -41,10 +41,10 @@ def test_not_implemented_methods_for_lock_protocol():  # type: ignore[no-untyped
     class LockProtocolImplementation(LockProtocol):
         pass
 
-    with pytest.raises(NotImplementedError, match=full_match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
         LockProtocolImplementation().acquire()
 
-    with pytest.raises(NotImplementedError, match=full_match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
         LockProtocolImplementation().release()
 
 
