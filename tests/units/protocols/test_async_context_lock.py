@@ -50,16 +50,16 @@ def test_not_implemented_methods_for_async_context_lock_protocol():  # type: ign
     class AsyncContextLockProtocolImplementation(AsyncContextLockProtocol):
         pass
 
-    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):
         AsyncContextLockProtocolImplementation().acquire()
 
-    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):
         AsyncContextLockProtocolImplementation().release()
 
-    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):
         AsyncContextLockProtocolImplementation().__aenter__()
 
-    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):
         AsyncContextLockProtocolImplementation().__aexit__(None, None, None)
 
 

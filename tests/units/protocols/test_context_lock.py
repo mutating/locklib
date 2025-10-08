@@ -60,16 +60,16 @@ def test_not_implemented_methods_for_context_lock_protocol():  # type: ignore[no
     class ContextLockProtocolImplementation(ContextLockProtocol):
         pass
 
-    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):
         ContextLockProtocolImplementation().acquire()
 
-    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):
         ContextLockProtocolImplementation().release()
 
-    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):
         ContextLockProtocolImplementation().__enter__()
 
-    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):  # type: ignore[operator]
+    with pytest.raises(NotImplementedError, match=match('Do not use the protocol as a lock.')):
         ContextLockProtocolImplementation().__exit__(None, None, None)
 
 
