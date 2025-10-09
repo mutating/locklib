@@ -20,6 +20,7 @@ It contains several useful additions to the standard thread synchronization tool
 - [**Installation**](#installation)
 - [**Lock protocols**](#lock-protocols)
 - [**SmartLock - deadlock is impossible with it**](#smartlock---deadlock-is-impossible-with-it)
+- [**Test your locks**](#test-your-locks)
 
 
 ## Installation
@@ -171,3 +172,33 @@ If you want to catch the exception, import this from the `locklib` too:
 ```python
 from locklib import DeadLockError
 ```
+
+
+## Test your locks
+
+Sometimes, when testing a code, you may need to detect if some action is taking place inside the lock. How to do this with a minimum of code? There is the `LockTraceWrapper` for this. It is a wrapper around a regular lock, which records it every time the code takes a lock or releases it. At the same time, the functionality of the wrapped lock is fully preserved.
+
+It's easy to create an object of such a lock. Just pass any other lock to the class constructor:
+
+```python
+from threading import Lock
+from locklib import LockTraceWrapper
+
+lock = LockTraceWrapper(Lock())
+```
+
+You can use it in the same way as the wrapped lock:
+
+```python
+with lock:
+    ...
+```
+
+Anywhere in your program, you can "inform" the lock that the action you need is being performed here:
+
+```python
+with lock:
+    ...
+```
+
+https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B0%D0%B2%D0%B8%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F_%D1%81%D0%BA%D0%BE%D0%B1%D0%BE%D1%87%D0%BD%D0%B0%D1%8F_%D0%BF%D0%BE%D1%81%D0%BB%D0%B5%D0%B4%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D0%BE%D1%81%D1%82%D1%8C
