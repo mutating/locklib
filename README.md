@@ -197,8 +197,17 @@ with lock:
 Anywhere in your program, you can "inform" the lock that the action you need is being performed here:
 
 ```python
-with lock:
-    ...
+lock.notify('event_name')
 ```
 
-https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B0%D0%B2%D0%B8%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F_%D1%81%D0%BA%D0%BE%D0%B1%D0%BE%D1%87%D0%BD%D0%B0%D1%8F_%D0%BF%D0%BE%D1%81%D0%BB%D0%B5%D0%B4%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D0%BE%D1%81%D1%82%D1%8C
+And! Now you can easily identify if there were cases when an event with this identifier did not occur under the mutex. To do this, use the `was_event_locked` method:
+
+```python
+lock.was_event_locked('event_name')
+```
+
+If the `notify` method was called with the same parameter only when the lock activated, it will return `True`. If not, that is, if there was at least one case when the c method was called with such an identifier without an activated mutex, `False` will be returned.
+
+How does it work? A modified [algorithm for determining the correct parenthesis sequence](https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B0%D0%B2%D0%B8%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F_%D1%81%D0%BA%D0%BE%D0%B1%D0%BE%D1%87%D0%BD%D0%B0%D1%8F_%D0%BF%D0%BE%D1%81%D0%BB%D0%B5%D0%B4%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D0%BE%D1%81%D1%82%D1%8C) is used here. For each thread for which any events were registered (taking the mutex, releasing the mutex, and also calling the `notify` method), the check takes place separately, that is, we determine that it was the same thread that held the mutex when `notify` was called, and not some other one.
+
+> ⚠️ The thread id is used to identify the streams. This id may be reused if the current thread ends, which in some cases may lead to incorrect identification of lock coverage for operations that were not actually covered by the lock. Make sure that this cannot happen during your test.
