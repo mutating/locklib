@@ -1,0 +1,6 @@
+from locklib.locks.tracer.events import TracerEvent
+
+
+def test_it_has_2_kinds_of_events():
+    assert TracerEvent.ACQUIRE == 'acquire'
+    assert TracerEvent.RELEASE == 'release'

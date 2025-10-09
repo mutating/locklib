@@ -1,6 +1,6 @@
-from enum import StrEnum
+from enum import Enum
 
 
-class TracerEvent(StrEnum):
+class TracerEvent(Enum):
     ACQUIRE = 'acquire'
     RELEASE = 'release'
