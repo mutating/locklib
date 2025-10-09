@@ -1,4 +1,4 @@
-from typing import List, Optional, Type
+from typing import List, Dict, Optional, Type
 from types import TracebackType
 from threading import get_ident
 from collections import defaultdict
@@ -47,7 +47,7 @@ class LockTraceWrapper:
         )
 
     def was_event_locked(self, identifier: str) -> bool:
-        stacks = defaultdict(list)
+        stacks: Dict[int, List[TracerEvent]] = defaultdict(list)
 
         for event in self.trace:
             stack = stacks[event.thread_id]
