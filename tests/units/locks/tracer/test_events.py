@@ -1,4 +1,4 @@
-from locklib.locks.tracer.events import TracerEvent
+from locklib import TracerEvent
 
 
 def test_it_has_2_kinds_of_events():
