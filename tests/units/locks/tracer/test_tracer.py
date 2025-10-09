@@ -201,3 +201,11 @@ def test_when_event_unlocked_and_locked_its_unlocked():
         wrapper.notify('lol')
 
     assert not wrapper.was_event_locked('lol')
+
+
+def test_unknown_event_type():
+    wrapper = LockTraceWrapper(Lock())
+
+    wrapper.trace.append(TracerEvent('unknown', 1))
+
+    assert wrapper.was_event_locked('lol')
