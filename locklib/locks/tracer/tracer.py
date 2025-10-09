@@ -14,7 +14,7 @@ class LockTraceWrapper:
         self.acquire()
 
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> Optional[bool]:
-        self.release()
+        return self.release()
 
     def acquire(self) -> None:
         self.lock.acquire()
