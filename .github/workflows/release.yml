@@ -1,0 +1,23 @@
+name: Create Release on Merge
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  release:
+    if: >
+      github.event.pull_request.merged == true &&
+      github.base_ref == 'main' &&
+      github.head_ref == 'develop'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.pull_request.title }}
+          release_name: ${{ github.event.pull_request.title }}
+          body: ${{ github.event.pull_request.body }}
