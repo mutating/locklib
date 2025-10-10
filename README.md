@@ -1,8 +1,8 @@
-![logo](https://raw.githubusercontent.com/pomponchik/locklib/develop/docs/assets/logo_5.png)
+![logo](https://raw.githubusercontent.com/pomponchik/locklib/develop/docs/assets/logo_7.svg)
 
 [![Downloads](https://static.pepy.tech/badge/locklib/month)](https://pepy.tech/project/locklib)
 [![Downloads](https://static.pepy.tech/badge/locklib)](https://pepy.tech/project/locklib)
-[![codecov](https://codecov.io/gh/pomponchik/locklib/graph/badge.svg?token=O9G4FD8QFC)](https://codecov.io/gh/pomponchik/locklib)
+[![Coverage Status](https://coveralls.io/repos/github/pomponchik/locklib/badge.svg?branch=main)](https://coveralls.io/github/pomponchik/locklib?branch=main)
 [![Lines of code](https://sloc.xyz/github/pomponchik/locklib/?category=code?)](https://github.com/boyter/scc/)
 [![Hits-of-Code](https://hitsofcode.com/github/pomponchik/locklib?branch=main)](https://hitsofcode.com/github/pomponchik/locklib/view?branch=main)
 [![Test-Package](https://github.com/pomponchik/locklib/actions/workflows/tests_and_coverage.yml/badge.svg)](https://github.com/pomponchik/locklib/actions/workflows/tests_and_coverage.yml)
@@ -10,6 +10,7 @@
 [![PyPI version](https://badge.fury.io/py/locklib.svg)](https://badge.fury.io/py/locklib)
 [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/pomponchik/locklib)
 
 It contains several useful additions to the standard thread synchronization tools, such as lock protocols and locks with advanced functionality.
 
@@ -19,6 +20,7 @@ It contains several useful additions to the standard thread synchronization tool
 - [**Installation**](#installation)
 - [**Lock protocols**](#lock-protocols)
 - [**SmartLock - deadlock is impossible with it**](#smartlock---deadlock-is-impossible-with-it)
+- [**Test your locks**](#test-your-locks)
 
 
 ## Installation
@@ -170,3 +172,42 @@ If you want to catch the exception, import this from the `locklib` too:
 ```python
 from locklib import DeadLockError
 ```
+
+
+## Test your locks
+
+Sometimes, when testing a code, you may need to detect if some action is taking place inside the lock. How to do this with a minimum of code? There is the `LockTraceWrapper` for this. It is a wrapper around a regular lock, which records it every time the code takes a lock or releases it. At the same time, the functionality of the wrapped lock is fully preserved.
+
+It's easy to create an object of such a lock. Just pass any other lock to the class constructor:
+
+```python
+from threading import Lock
+from locklib import LockTraceWrapper
+
+lock = LockTraceWrapper(Lock())
+```
+
+You can use it in the same way as the wrapped lock:
+
+```python
+with lock:
+    ...
+```
+
+Anywhere in your program, you can "inform" the lock that the action you need is being performed here:
+
+```python
+lock.notify('event_name')
+```
+
+And! Now you can easily identify if there were cases when an event with this identifier did not occur under the mutex. To do this, use the `was_event_locked` method:
+
+```python
+lock.was_event_locked('event_name')
+```
+
+If the `notify` method was called with the same parameter only when the lock activated, it will return `True`. If not, that is, if there was at least one case when the c method was called with such an identifier without an activated mutex, `False` will be returned.
+
+How does it work? A modified [algorithm for determining the correct parenthesis sequence](https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B0%D0%B2%D0%B8%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F_%D1%81%D0%BA%D0%BE%D0%B1%D0%BE%D1%87%D0%BD%D0%B0%D1%8F_%D0%BF%D0%BE%D1%81%D0%BB%D0%B5%D0%B4%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D0%BE%D1%81%D1%82%D1%8C) is used here. For each thread for which any events were registered (taking the mutex, releasing the mutex, and also calling the `notify` method), the check takes place separately, that is, we determine that it was the same thread that held the mutex when `notify` was called, and not some other one.
+
+> ⚠️ The thread id is used to identify the streams. This id may be reused if the current thread ends, which in some cases may lead to incorrect identification of lock coverage for operations that were not actually covered by the lock. Make sure that this cannot happen during your test.

@@ -19,6 +19,12 @@ class SmartLock:
         self.deque: Deque[int] = deque()
         self.local_locks: Dict[int, Lock] = {}
 
+    def __enter__(self) -> None:
+        self.acquire()
+
+    def __exit__(self, exception_type: Optional[Type[BaseException]], exception_value: Optional[BaseException], traceback: Optional[TracebackType]) -> None:
+        self.release()
+
     def acquire(self) -> None:
         id = get_native_id()
         previous_element_lock = None
@@ -57,9 +63,3 @@ class SmartLock:
                     self.graph.delete_link(next_element, id)
 
                 lock.release()
-
-    def __enter__(self) -> None:
-        self.acquire()
-
-    def __exit__(self, exception_type: Optional[Type[BaseException]], exception_value: Optional[BaseException], traceback: Optional[TracebackType]) -> None:
-        self.release()

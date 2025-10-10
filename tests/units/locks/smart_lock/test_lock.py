@@ -3,7 +3,7 @@ from queue import Queue
 from threading import Thread, Lock
 
 import pytest
-import full_match
+from full_match import match
 
 from locklib import SmartLock, DeadLockError
 
@@ -11,7 +11,7 @@ from locklib import SmartLock, DeadLockError
 def test_release_unlocked():
     lock = SmartLock()
 
-    with pytest.raises(RuntimeError, match=full_match('Release unlocked lock.')):
+    with pytest.raises(RuntimeError, match=match('Release unlocked lock.')):
         lock.release()
 
 
