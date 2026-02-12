@@ -1,11 +1,11 @@
-from time import sleep
 from queue import Queue
-from threading import Thread, Lock
+from threading import Lock, Thread
+from time import sleep
 
 import pytest
 from full_match import match
 
-from locklib import SmartLock, DeadLockError
+from locklib import DeadLockError, SmartLock
 
 
 def test_release_unlocked():
@@ -54,10 +54,9 @@ def test_raise_when_simple_deadlock():
             nonlocal flag
             try:
                 while True:
-                    with lock_1:
-                        with lock_2:
-                            if flag:
-                                break
+                    with lock_1, lock_2:
+                        if flag:
+                            break
             except DeadLockError:
                 flag = True
                 queue.put(True)
@@ -66,10 +65,9 @@ def test_raise_when_simple_deadlock():
             nonlocal flag
             try:
                 while True:
-                    with lock_2:
-                        with lock_1:
-                            if flag:
-                                break
+                    with lock_2, lock_1:
+                        if flag:
+                            break
             except DeadLockError:
                 flag = True
                 queue.put(True)
@@ -86,7 +84,7 @@ def test_raise_when_simple_deadlock():
 
 
 @pytest.mark.timeout(5)
-def test_raise_when_not_so_simple_deadlock():
+def test_raise_when_not_so_simple_deadlock():  # noqa: PLR0915
     number_of_attempts = 50
 
     lock_1 = SmartLock()
@@ -112,7 +110,7 @@ def test_raise_when_not_so_simple_deadlock():
                                 if flag:
                                     break
             except DeadLockError:
-                with lock:
+                with lock:  # noqa: B023
                     cycles += 1
                     if cycles == 2:
                         flag = True
@@ -131,7 +129,7 @@ def test_raise_when_not_so_simple_deadlock():
                                 if flag:
                                     break
             except DeadLockError:
-                with lock:
+                with lock:  # noqa: B023
                     cycles += 1
                     if cycles == 2:
                         flag = True
@@ -150,7 +148,7 @@ def test_raise_when_not_so_simple_deadlock():
                                 if flag:
                                     break
             except DeadLockError:
-                with lock:
+                with lock:  # noqa: B023
                     cycles += 1
                     if cycles == 2:
                         flag = True

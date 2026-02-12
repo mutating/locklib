@@ -1,6 +1,6 @@
-from typing import List, Union
 from threading import Lock, Thread, get_ident
 from time import sleep
+from typing import List, Union
 
 import pytest
 

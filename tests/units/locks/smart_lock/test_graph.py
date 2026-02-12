@@ -1,7 +1,7 @@
 import pytest
 
-from locklib.locks.smart_lock.graph import LocksGraph
 from locklib.errors import DeadLockError
+from locklib.locks.smart_lock.graph import LocksGraph
 
 
 def test_multiple_set_and_get():
@@ -59,7 +59,7 @@ def test_delete_non_existing_link():
 
     graph.delete_link(1, 3)
 
-    assert graph.get_links_from(1) == {2,}
+    assert graph.get_links_from(1) == {2}
 
 
 def test_detect_simple_cycle():
