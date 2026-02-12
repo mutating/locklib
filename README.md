@@ -15,7 +15,11 @@
 
 </details>
 
+<p align="center">
+
 ![logo](https://raw.githubusercontent.com/pomponchik/locklib/develop/docs/assets/logo_7.svg)
+
+</p>
 
 It contains several useful additions to the standard thread synchronization tools, such as lock protocols and locks with advanced functionality.
 
