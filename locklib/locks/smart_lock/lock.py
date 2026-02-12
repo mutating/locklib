@@ -1,14 +1,17 @@
 try:
-    from threading import Lock, get_native_id  # type: ignore[attr-defined, unused-ignore]
+    from threading import (  # type: ignore[attr-defined, unused-ignore]
+        Lock,
+        get_native_id,
+    )
 except ImportError:  # pragma: no cover
-    from threading import Lock, get_ident as get_native_id  # get_native_id is available only since python 3.8
+    from threading import Lock  # get_native_id is available only since python 3.8
+    from threading import get_ident as get_native_id
 
 from collections import deque
-from typing import Type, Deque, Dict, Optional
 from types import TracebackType
+from typing import Deque, Dict, Optional, Type
 
 from locklib.locks.smart_lock.graph import LocksGraph
-
 
 graph = LocksGraph()
 
@@ -26,40 +29,38 @@ class SmartLock:
         self.release()
 
     def acquire(self) -> None:
-        id = get_native_id()
+        thread_id = get_native_id()
         previous_element_lock = None
 
-        with self.lock:
-            with self.graph.lock:
-                if not self.deque:
-                    self.deque.appendleft(id)
-                    self.local_locks[id] = Lock()
-                    self.local_locks[id].acquire()
-                else:
-                    previous_element = self.deque[0]
-                    self.graph.add_link(id, previous_element)
-                    self.deque.appendleft(id)
-                    self.local_locks[id] = Lock()
-                    self.local_locks[id].acquire()
-                    previous_element_lock = self.local_locks[previous_element]
+        with self.lock, self.graph.lock:
+            if not self.deque:
+                self.deque.appendleft(thread_id)
+                self.local_locks[thread_id] = Lock()
+                self.local_locks[thread_id].acquire()
+            else:
+                previous_element = self.deque[0]
+                self.graph.add_link(thread_id, previous_element)
+                self.deque.appendleft(thread_id)
+                self.local_locks[thread_id] = Lock()
+                self.local_locks[thread_id].acquire()
+                previous_element_lock = self.local_locks[previous_element]
 
         if previous_element_lock is not None:
             previous_element_lock.acquire()
 
     def release(self) -> None:
-        id = get_native_id()
+        thread_id = get_native_id()
 
-        with self.lock:
-            with self.graph.lock:
-                if id not in self.local_locks:
-                    raise RuntimeError('Release unlocked lock.')
+        with self.lock, self.graph.lock:
+            if thread_id not in self.local_locks:
+                raise RuntimeError('Release unlocked lock.')
 
-                self.deque.pop()
-                lock = self.local_locks[id]
-                del self.local_locks[id]
+            self.deque.pop()
+            lock = self.local_locks[thread_id]
+            del self.local_locks[thread_id]
 
-                if len(self.deque) != 0:
-                    next_element = self.deque[-1]
-                    self.graph.delete_link(next_element, id)
+            if len(self.deque) != 0:
+                next_element = self.deque[-1]
+                self.graph.delete_link(next_element, thread_id)
 
-                lock.release()
+            lock.release()

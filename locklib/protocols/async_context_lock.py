@@ -1,7 +1,5 @@
-from typing import Type, Optional, Any
 from types import TracebackType
-
-from typing import Protocol, runtime_checkable
+from typing import Any, Optional, Protocol, Type, runtime_checkable
 
 from locklib.protocols.lock import LockProtocol
 

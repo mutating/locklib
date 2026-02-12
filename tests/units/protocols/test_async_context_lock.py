@@ -1,7 +1,8 @@
-from multiprocessing import Lock as MLock
-from threading import Lock as TLock, RLock as TRLock
 from asyncio import Lock as ALock
 from contextlib import asynccontextmanager
+from multiprocessing import Lock as MLock
+from threading import Lock as TLock
+from threading import RLock as TRLock
 
 import pytest
 from full_match import match

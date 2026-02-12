@@ -1,6 +1,6 @@
-from threading import Lock
 from collections import defaultdict
-from typing import List, Set, DefaultDict, Optional
+from threading import Lock
+from typing import DefaultDict, List, Optional, Set
 
 from locklib.errors import DeadLockError
 

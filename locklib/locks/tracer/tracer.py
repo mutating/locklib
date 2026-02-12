@@ -1,11 +1,11 @@
-from typing import List, Dict, Optional, Type
-from types import TracebackType
-from threading import get_ident
 from collections import defaultdict
+from threading import get_ident
+from types import TracebackType
+from typing import Dict, List, Optional, Type
 
-from locklib.protocols.lock import LockProtocol
-from locklib.locks.tracer.events import TracerEvent, TracerEventType
 from locklib.errors import StrangeEventOrderError
+from locklib.locks.tracer.events import TracerEvent, TracerEventType
+from locklib.protocols.lock import LockProtocol
 
 
 class LockTraceWrapper:
@@ -25,7 +25,7 @@ class LockTraceWrapper:
             TracerEvent(
                 TracerEventType.ACQUIRE,
                 thread_id=get_ident(),
-            )
+            ),
         )
 
     def release(self) -> None:
@@ -34,7 +34,7 @@ class LockTraceWrapper:
             TracerEvent(
                 TracerEventType.RELEASE,
                 thread_id=get_ident(),
-            )
+            ),
         )
 
     def notify(self, identifier: str) -> None:
@@ -43,7 +43,7 @@ class LockTraceWrapper:
                 TracerEventType.ACTION,
                 thread_id=get_ident(),
                 identifier=identifier,
-            )
+            ),
         )
 
     def was_event_locked(self, identifier: str) -> bool:
