@@ -1,4 +1,5 @@
-![logo](https://raw.githubusercontent.com/pomponchik/locklib/develop/docs/assets/logo_7.svg)
+<details>
+  <summary>ⓘ</summary>
 
 [![Downloads](https://static.pepy.tech/badge/locklib/month)](https://pepy.tech/project/locklib)
 [![Downloads](https://static.pepy.tech/badge/locklib)](https://pepy.tech/project/locklib)
@@ -11,6 +12,10 @@
 [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/pomponchik/locklib)
+
+</details>
+
+![logo](https://raw.githubusercontent.com/pomponchik/locklib/develop/docs/assets/logo_7.svg)
 
 It contains several useful additions to the standard thread synchronization tools, such as lock protocols and locks with advanced functionality.
 
