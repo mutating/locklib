@@ -4,7 +4,7 @@ coverage==7.6.1
 twine==6.1.0
 wheel==0.41.2
 build==1.2.2.post1
-ruff==0.9.9
+ruff==0.14.6
 mypy==1.14.1
 mutmut==3.2.3
 full_match==0.0.3
