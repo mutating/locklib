@@ -1,6 +1,9 @@
 from locklib.errors import DeadLockError as DeadLockError
 from locklib.errors import (
-    StrangeEventOrderError as StrangeEventOrderError, ThereWasNoSuchEvent as ThereWasNoSuchEvent,
+    StrangeEventOrderError as StrangeEventOrderError,
+)
+from locklib.errors import (
+    ThereWasNoSuchEvent as ThereWasNoSuchEvent,
 )
 from locklib.locks.smart_lock.lock import SmartLock as SmartLock
 from locklib.locks.tracer.tracer import (
