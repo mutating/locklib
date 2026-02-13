@@ -1,5 +1,8 @@
 class DeadLockError(Exception):
-    pass
+    ...
 
 class StrangeEventOrderError(Exception):
-    pass
+    ...
+
+class ThereWasNoSuchEventError(Exception):
+    ...

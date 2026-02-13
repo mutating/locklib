@@ -3,8 +3,9 @@ from time import sleep
 from typing import List, Union
 
 import pytest
+from full_match import match
 
-from locklib import LockTraceWrapper, StrangeEventOrderError
+from locklib import LockTraceWrapper, StrangeEventOrderError, ThereWasNoSuchEventError
 from locklib.locks.tracer.events import TracerEvent, TracerEventType
 
 
@@ -72,11 +73,22 @@ def test_try_to_release_event_without_corresponding_acquire_event():
     with pytest.raises(StrangeEventOrderError):
         wrapper.was_event_locked('kek')
 
+    with pytest.raises(StrangeEventOrderError):
+        wrapper.was_event_locked('kek', raise_exception=True)
+
+    assert not wrapper.was_event_locked('kek', raise_exception=False)
+
 
 def test_event_is_locked_if_there_was_no_events():
     wrapper = LockTraceWrapper(Lock())
 
-    assert wrapper.was_event_locked('kek')
+    assert not wrapper.was_event_locked('kek', raise_exception=False)
+
+    with pytest.raises(ThereWasNoSuchEventError, match=match('No events with identifier "kek" occurred in any of the threads, so the question "was it thread-safe" is meaningless.')):
+        wrapper.was_event_locked('kek')
+
+    with pytest.raises(ThereWasNoSuchEventError, match=match('No events with identifier "kek" occurred in any of the threads, so the question "was it thread-safe" is meaningless.')):
+        wrapper.was_event_locked('kek', raise_exception=True)
 
 
 def test_event_is_locked_if_there_are_only_opening_and_slosing_events():
@@ -85,7 +97,13 @@ def test_event_is_locked_if_there_are_only_opening_and_slosing_events():
     with wrapper:
         pass
 
-    assert wrapper.was_event_locked('kek')
+    assert not wrapper.was_event_locked('kek', raise_exception=False)
+
+    with pytest.raises(ThereWasNoSuchEventError, match=match('No events with identifier "kek" occurred in any of the threads, so the question "was it thread-safe" is meaningless.')):
+        wrapper.was_event_locked('kek')
+
+    with pytest.raises(ThereWasNoSuchEventError, match=match('No events with identifier "kek" occurred in any of the threads, so the question "was it thread-safe" is meaningless.')):
+        wrapper.was_event_locked('kek', raise_exception=True)
 
 
 def test_simple_case_of_locked_event():
@@ -208,4 +226,10 @@ def test_unknown_event_type():
 
     wrapper.trace.append(TracerEvent('unknown', 1))
 
-    assert wrapper.was_event_locked('lol')
+    assert not wrapper.was_event_locked('lol', raise_exception=False)
+
+    with pytest.raises(ThereWasNoSuchEventError, match=match('No events with identifier "lol" occurred in any of the threads, so the question "was it thread-safe" is meaningless.')):
+        wrapper.was_event_locked('lol')
+
+    with pytest.raises(ThereWasNoSuchEventError, match=match('No events with identifier "lol" occurred in any of the threads, so the question "was it thread-safe" is meaningless.')):
+        wrapper.was_event_locked('lol', raise_exception=True)

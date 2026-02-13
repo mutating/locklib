@@ -3,7 +3,7 @@ from threading import get_ident
 from types import TracebackType
 from typing import Dict, List, Optional, Type
 
-from locklib.errors import StrangeEventOrderError
+from locklib.errors import StrangeEventOrderError, ThereWasNoSuchEventError
 from locklib.locks.tracer.events import TracerEvent, TracerEventType
 from locklib.protocols.lock import LockProtocol
 
@@ -46,8 +46,10 @@ class LockTraceWrapper:
             ),
         )
 
-    def was_event_locked(self, identifier: str) -> bool:
+    def was_event_locked(self, identifier: str, raise_exception: bool = True) -> bool:
         stacks: Dict[int, List[TracerEvent]] = defaultdict(list)
+
+        there_was_action_with_this_identifier = False
 
         for event in self.trace:
             stack = stacks[event.thread_id]
@@ -57,11 +59,18 @@ class LockTraceWrapper:
 
             elif event.type == TracerEventType.RELEASE:
                 if not stack:
-                    raise StrangeEventOrderError('Release event without corresponding acquire event.')
+                    if raise_exception:
+                        raise StrangeEventOrderError('Release event without corresponding acquire event.')
+                    return False
                 stack.pop()
 
             elif event.type == TracerEventType.ACTION:
-                if event.identifier == identifier and not stack:
-                    return False
+                if event.identifier == identifier:
+                    there_was_action_with_this_identifier = True
+                    if not stack:
+                        return False
 
-        return True
+        if (not there_was_action_with_this_identifier) and raise_exception:
+            raise ThereWasNoSuchEventError(f'No events with identifier "{identifier}" occurred in any of the threads, so the question "was it thread-safe" is meaningless.')
+
+        return there_was_action_with_this_identifier
