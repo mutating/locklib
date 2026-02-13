@@ -3,3 +3,6 @@ class DeadLockError(Exception):
 
 class StrangeEventOrderError(Exception):
     pass
+
+class ThereWasNoSuchEvent(Exception):
+    pass
