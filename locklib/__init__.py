@@ -3,7 +3,7 @@ from locklib.errors import (
     StrangeEventOrderError as StrangeEventOrderError,
 )
 from locklib.errors import (
-    ThereWasNoSuchEvent as ThereWasNoSuchEvent,
+    ThereWasNoSuchEventError as ThereWasNoSuchEventError,
 )
 from locklib.locks.smart_lock.lock import SmartLock as SmartLock
 from locklib.locks.tracer.tracer import (

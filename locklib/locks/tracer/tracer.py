@@ -3,7 +3,7 @@ from threading import get_ident
 from types import TracebackType
 from typing import Dict, List, Optional, Type
 
-from locklib.errors import StrangeEventOrderError, ThereWasNoSuchEvent
+from locklib.errors import StrangeEventOrderError, ThereWasNoSuchEventError
 from locklib.locks.tracer.events import TracerEvent, TracerEventType
 from locklib.protocols.lock import LockProtocol
 
@@ -71,6 +71,6 @@ class LockTraceWrapper:
                         return False
 
         if (not there_was_action_with_this_identifier) and raise_exception:
-            raise ThereWasNoSuchEvent(f'No events with identifier "{identifier}" occurred in any of the threads, so the question "was it thread-safe" is meaningless.')
+            raise ThereWasNoSuchEventError(f'No events with identifier "{identifier}" occurred in any of the threads, so the question "was it thread-safe" is meaningless.')
 
         return there_was_action_with_this_identifier

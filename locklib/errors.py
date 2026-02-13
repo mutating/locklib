@@ -4,5 +4,5 @@ class DeadLockError(Exception):
 class StrangeEventOrderError(Exception):
     ...
 
-class ThereWasNoSuchEvent(Exception):
+class ThereWasNoSuchEventError(Exception):
     ...
