@@ -54,5 +54,5 @@ format.quote-style = "single"
 addopts = "-p no:warnings"
 
 [project.urls]
-'Source' = 'https://github.com/pomponchik/locklib'
-'Tracker' = 'https://github.com/pomponchik/locklib/issues'
+'Source' = 'https://github.com/mutating/locklib'
+'Tracker' = 'https://github.com/mutating/locklib/issues'
