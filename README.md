@@ -86,7 +86,7 @@ LockProtocol
  └── AsyncContextLockProtocol
 ```
 
-`ContextLockProtocol` describes objects that satisfy `LockProtocol` and also implement the [context manager protocol](https://docs.python.org/3/library/stdtypes.html#typecontextmanager). `AsyncContextLockProtocol`, similarly, describes objects that satisfy `LockProtocol` and implement the [asynchronous context manager](https://docs.python.org/3/reference/datamodel.html#async-context-managers) protocol.
+`ContextLockProtocol` describes objects that satisfy `LockProtocol` and also implement the [context manager protocol](https://docs.python.org/3/library/stdtypes.html#typecontextmanager). Similarly,`AsyncContextLockProtocol` describes objects that satisfy `LockProtocol` and implement the [asynchronous context manager](https://docs.python.org/3/reference/datamodel.html#async-context-managers) protocol.
 
 Almost all standard library locks, as well as `SmartLock`, satisfy `ContextLockProtocol`:
 
@@ -102,7 +102,7 @@ print(isinstance(TRLock(), ContextLockProtocol)) # True
 print(isinstance(SmartLock(), ContextLockProtocol)) # True
 ```
 
-However, the [`Lock` from asyncio](https://docs.python.org/3/library/asyncio-sync.html#asyncio.Lock) belongs to a separate category and `AsyncContextLockProtocol` is needed to describe it:
+However, the [`asyncio.Lock`](https://docs.python.org/3/library/asyncio-sync.html#asyncio.Lock) belongs to a separate category and `AsyncContextLockProtocol` is needed to describe it:
 
 ```python
 from asyncio import Lock
