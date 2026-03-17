@@ -21,48 +21,48 @@
 
 </p>
 
-It contains several useful additions to the standard thread synchronization tools, such as lock protocols and locks with advanced functionality.
+It adds several useful features to Python’s standard synchronization primitives, including lock protocols and enhanced lock implementations.
 
 
 ## Table of contents
 
 - [**Installation**](#installation)
 - [**Lock protocols**](#lock-protocols)
-- [**SmartLock - deadlock is impossible with it**](#smartlock---deadlock-is-impossible-with-it)
+- [**`SmartLock` turns deadlocks into exceptions**](#smartlock-turns-deadlocks-into-exceptions)
 - [**Test your locks**](#test-your-locks)
 
 
 ## Installation
 
-Get the `locklib` from the [pypi](https://pypi.org/project/locklib/):
+Install [`locklib`](https://pypi.org/project/locklib/) with `pip`:
 
 ```bash
 pip install locklib
 ```
 
-... or directly from git:
+... or directly from the Git repository:
 
 ```bash
 pip install git+https://github.com/mutating/locklib.git
 ```
 
-You can also quickly try out this and other packages without having to install using [instld](https://github.com/pomponchik/instld).
+You can also use [`instld`](https://github.com/pomponchik/instld) to quickly try out this package and others without installing them.
 
 
 ## Lock protocols
 
-Protocols are needed so that you can write typed code without being bound to specific classes. Protocols from this library allow you to "equalize" locks from the standard library and third-party locks, including those provided by this library.
+Protocols let you write type-annotated code without depending on concrete classes. The protocols in this library let you treat lock implementations from the standard library, third-party packages, and this library uniformly.
 
-We consider the basic characteristic of the lock protocol to be the presence of two methods for an object:
+At a minimum, a lock object should provide two methods:
 
 ```python
-def acquire() -> None: pass
-def release() -> None: pass
+def acquire(self) -> None: ...
+def release(self) -> None: ...
 ```
 
-All the locks from the standard library correspond to this, as well as the locks presented in this one.
+All standard library locks conform to this, as do the locks provided by this library.
 
-To check for compliance with this minimum standard, `locklib` contains the `LockProtocol`. You can check for yourself that all the locks match it:
+To check for compliance with this minimum standard, `locklib` contains the `LockProtocol`. You can verify that all of these locks satisfy it:
 
 ```python
 from multiprocessing import Lock as MLock
@@ -78,7 +78,7 @@ print(isinstance(ALock(), LockProtocol)) # True
 print(isinstance(SmartLock(), LockProtocol)) # True
 ```
 
-However! Most idiomatic python code using locks uses them as context managers. If your code is like that too, you can use one of the two inheritors of the regular `LockProtocol`: `ContextLockProtocol` or `AsyncContextLockProtocol`. Thus, the protocol inheritance hierarchy looks like this:
+However, most idiomatic Python code uses locks as context managers. If your code does too, you can use one of the two protocols derived from the base `LockProtocol`: `ContextLockProtocol` or `AsyncContextLockProtocol`. Thus, the protocol hierarchy looks like this:
 
 ```
 LockProtocol
@@ -86,9 +86,9 @@ LockProtocol
  └── AsyncContextLockProtocol
 ```
 
-`ContextLockProtocol` describes the objects described by `LockProtocol`, which are also [context managers](https://docs.python.org/3/library/stdtypes.html#typecontextmanager). `AsyncContextLockProtocol`, by analogy, describes objects that are instances of `LockProtocol`, as well as [asynchronous context managers](https://docs.python.org/3/reference/datamodel.html#async-context-managers).
+`ContextLockProtocol` describes objects that satisfy `LockProtocol` and also implement the [context manager protocol](https://docs.python.org/3/library/stdtypes.html#typecontextmanager). `AsyncContextLockProtocol`, similarly, describes objects that satisfy `LockProtocol` and implement the [asynchronous context manager](https://docs.python.org/3/reference/datamodel.html#async-context-managers) protocol.
 
-Almost all the locks from the standard library are instances of `ContextLockProtocol`, as well as `SmartLock`.
+Almost all standard library locks, as well as `SmartLock`, satisfy `ContextLockProtocol`:
 
 ```python
 from multiprocessing import Lock as MLock
@@ -111,12 +111,12 @@ from locklib import AsyncContextLockProtocol
 print(isinstance(Lock(), AsyncContextLockProtocol)) # True
 ```
 
-If you use type hints and static verification tools like [mypy](https://github.com/python/mypy), we highly recommend using the narrowest of the presented categories for lock protocols, which describe the requirements for your locales.
+If you use type hints and static verification tools like [mypy](https://github.com/python/mypy), we highly recommend using the narrowest applicable protocol for your use case.
 
 
-## `SmartLock` - deadlock is impossible with it
+## `SmartLock` turns deadlocks into exceptions
 
-`locklib` contains a lock that cannot get into the [deadlock](https://en.wikipedia.org/wiki/Deadlock) - `SmartLock`, based on [Wait-for Graph](https://en.wikipedia.org/wiki/Wait-for_graph). You can use it as a usual [```Lock``` from the standard library](https://docs.python.org/3/library/threading.html#lock-objects). Let's check that it can protect us from the [race condition](https://en.wikipedia.org/wiki/Race_condition) in the same way:
+`locklib` includes a lock that prevents [deadlocks](https://en.wikipedia.org/wiki/Deadlock) — `SmartLock`, based on [Wait-for Graph](https://en.wikipedia.org/wiki/Wait-for_graph). You can use it like a regular [`Lock` from the standard library](https://docs.python.org/3/library/threading.html#lock-objects). Let’s verify that it prevents [race conditions](https://en.wikipedia.org/wiki/Race_condition) in the same way:
 
 ```python
 from threading import Thread
@@ -126,11 +126,11 @@ lock = SmartLock()
 counter = 0
 
 def function():
-  global counter
+    global counter
 
-  for _ in range(1000):
-      with lock:
-          counter += 1
+    for _ in range(1000):
+        with lock:
+            counter += 1
 
 thread_1 = Thread(target=function)
 thread_2 = Thread(target=function)
@@ -140,7 +140,7 @@ thread_2.start()
 assert counter == 2000
 ```
 
-Yeah, in this case the lock helps us not to get a race condition, as the standard ```Lock``` does. But! Let's trigger a deadlock and look what happens:
+As expected, this lock prevents race conditions just like the standard `Lock`. Now let’s deliberately trigger a deadlock and see what happens:
 
 ```python
 from threading import Thread
@@ -150,16 +150,16 @@ lock_1 = SmartLock()
 lock_2 = SmartLock()
 
 def function_1():
-  while True:
-    with lock_1:
-      with lock_2:
-        pass
+    while True:
+        with lock_1:
+            with lock_2:
+                pass
 
 def function_2():
-  while True:
-    with lock_2:
-      with lock_1:
-        pass
+    while True:
+        with lock_2:
+            with lock_1:
+                pass
 
 thread_1 = Thread(target=function_1)
 thread_2 = Thread(target=function_2)
@@ -167,16 +167,16 @@ thread_1.start()
 thread_2.start()
 ```
 
-And... We have an exception like this:
+This raises an exception like the following:
 
 ```
 ...
 locklib.errors.DeadLockError: A cycle between 1970256th and 1970257th threads has been detected.
 ```
 
-Deadlocks are impossible for this lock!
+So, with this lock, a deadlock results in an exception instead of blocking forever.
 
-If you want to catch the exception, import this from the `locklib` too:
+If you want to catch this exception, you can also import it from `locklib`:
 
 ```python
 from locklib import DeadLockError
@@ -185,9 +185,9 @@ from locklib import DeadLockError
 
 ## Test your locks
 
-Sometimes, when testing a code, you may need to detect if some action is taking place inside the lock. How to do this with a minimum of code? There is the `LockTraceWrapper` for this. It is a wrapper around a regular lock, which records it every time the code takes a lock or releases it. At the same time, the functionality of the wrapped lock is fully preserved.
+Sometimes, when testing code, you may need to detect whether some action occurs while the lock is held. How can you do this with minimal boilerplate? Use `LockTraceWrapper`. It is a wrapper around a regular lock that records every acquisition and release. At the same time, it fully preserves the wrapped lock’s behavior.
 
-It's easy to create an object of such a lock. Just pass any other lock to the class constructor:
+Creating such a wrapper is easy. Just pass any lock to the constructor:
 
 ```python
 from threading import Lock
@@ -196,29 +196,29 @@ from locklib import LockTraceWrapper
 lock = LockTraceWrapper(Lock())
 ```
 
-You can use it in the same way as the wrapped lock:
+You can use it exactly like the wrapped lock:
 
 ```python
 with lock:
     ...
 ```
 
-Anywhere in your program, you can "inform" the lock that the action you need is being performed here:
+Anywhere in your program, you can record that a specific event occurred:
 
 ```python
 lock.notify('event_name')
 ```
 
-And! Now you can easily identify if there were cases when an event with this identifier did not occur under the mutex. To do this, use the `was_event_locked` method:
+You can then easily check whether an event with this identifier ever occurred outside the lock. To do this, use the `was_event_locked` method:
 
 ```python
 lock.was_event_locked('event_name')
 ```
 
-If the `notify` method was called with the same parameter only when the lock activated, it will return `True`. If not, that is, if there was at least one case when the c method was called with such an identifier without an activated mutex, `False` will be returned.
+If the `notify` method was called with the same parameter only while the lock was held, it will return `True`. If not, that is, if there was at least one case when the `notify` method was called with that identifier without the lock being held, `False` will be returned.
 
-How does it work? A modified [algorithm for determining the correct parenthesis sequence](https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B0%D0%B2%D0%B8%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F_%D1%81%D0%BA%D0%BE%D0%B1%D0%BE%D1%87%D0%BD%D0%B0%D1%8F_%D0%BF%D0%BE%D1%81%D0%BB%D0%B5%D0%B4%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D0%BE%D1%81%D1%82%D1%8C) is used here. For each thread for which any events were registered (taking the mutex, releasing the mutex, and also calling the `notify` method), the check takes place separately, that is, we determine that it was the same thread that held the mutex when `notify` was called, and not some other one.
+How does it work? It uses a modified [balanced-parentheses algorithm](https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B0%D0%B2%D0%B8%D0%BB%D1%8C%D0%BD%D0%B0%D1%8F_%D1%81%D0%BA%D0%BE%D0%B1%D0%BE%D1%87%D0%BD%D0%B0%D1%8F_%D0%BF%D0%BE%D1%81%D0%BB%D0%B5%D0%B4%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D0%BE%D1%81%D1%82%D1%8C). For each thread for which any events were registered (taking the mutex, releasing the mutex, and also calling the `notify` method), the check takes place separately, that is, we determine that it was the same thread that held the mutex when `notify` was called, and not some other one.
 
-> ⚠️ The thread id is used to identify the threads. This id may be reused if the current thread ends, which in some cases may lead to incorrect identification of lock coverage for operations that were not actually covered by the lock. Make sure that this cannot happen during your test.
+> ⚠️ The thread id is used to identify the threads. A thread ID may be reused after a thread exits, which may in some cases cause the wrapper to incorrectly report that an operation was protected by the lock. Make sure this cannot happen during your tests.
 
-If no event with the specified identifier was recorded in any of the threads, the `ThereWasNoSuchEventError` exception will be raised by default. If you want to disable this so that the method simply returns `False` in such situations, pass the additional argument `raise_exception=False` to `was_event_locked`.
+If no event with the specified identifier was recorded in any thread, the `ThereWasNoSuchEventError` exception will be raised by default. If you want to disable this so that the method simply returns `False` in such situations, pass the keyword argument `raise_exception=False` to `was_event_locked`.
