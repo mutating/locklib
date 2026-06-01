@@ -28,6 +28,7 @@ It adds several useful features to Python’s standard synchronization primitive
 
 - [**Installation**](#installation)
 - [**Lock protocols**](#lock-protocols)
+- [**Empty locks**](#empty-locks)
 - [**`SmartLock` turns deadlocks into exceptions**](#smartlock-turns-deadlocks-into-exceptions)
 - [**Test your locks**](#test-your-locks)
 
