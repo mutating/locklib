@@ -12,3 +12,4 @@ html
 .coverage
 htmlcov
 test.py
+CLAUDE.md
