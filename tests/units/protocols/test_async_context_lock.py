@@ -7,13 +7,14 @@ from threading import RLock as TRLock
 import pytest
 from full_match import match
 
-from locklib import AsyncContextLockProtocol, SmartLock
+from locklib import AsyncContextLockProtocol, AsyncEmptyLock, EmptyLock, SmartLock
 
 
 @pytest.mark.parametrize(
     'lock',  # type: ignore[no-untyped-def, unused-ignore]
     [
         ALock(),
+        AsyncEmptyLock(),
     ],
 )
 def test_locks_are_instances_of_context_lock_protocol(lock):  # type: ignore[no-untyped-def, unused-ignore]
@@ -33,6 +34,7 @@ def test_locks_are_instances_of_context_lock_protocol(lock):  # type: ignore[no-
         TLock(),
         TRLock(),
         SmartLock(),
+        EmptyLock(),
     ],
 )
 def test_other_objects_are_not_instances_of_context_lock(other):  # type: ignore[no-untyped-def, unused-ignore]
@@ -69,3 +71,4 @@ def tests_for_type_checking():  # type: ignore[no-untyped-def]
         return lock
 
     some_function(ALock())
+    some_function(AsyncEmptyLock())

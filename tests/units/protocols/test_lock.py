@@ -6,7 +6,7 @@ from threading import RLock as TRLock
 import pytest
 from full_match import match
 
-from locklib import LockProtocol, SmartLock
+from locklib import AsyncEmptyLock, EmptyLock, LockProtocol, SmartLock
 
 
 @pytest.mark.parametrize(
@@ -17,6 +17,8 @@ from locklib import LockProtocol, SmartLock
         TRLock(),
         ALock(),
         SmartLock(),
+        EmptyLock(),
+        AsyncEmptyLock(),
     ],
 )
 def test_locks_are_instances_of_lock_protocol(lock):  # type: ignore[no-untyped-def, unused-ignore]
@@ -58,3 +60,5 @@ def tests_for_type_checking():  # type: ignore[no-untyped-def]
     some_function(TRLock())
     some_function(ALock())
     some_function(SmartLock())
+    some_function(EmptyLock())
+    some_function(AsyncEmptyLock())

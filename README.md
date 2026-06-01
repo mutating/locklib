@@ -28,6 +28,7 @@ It adds several useful features to Python’s standard synchronization primitive
 
 - [**Installation**](#installation)
 - [**Lock protocols**](#lock-protocols)
+- [**Empty locks**](#empty-locks)
 - [**`SmartLock` turns deadlocks into exceptions**](#smartlock-turns-deadlocks-into-exceptions)
 - [**Test your locks**](#test-your-locks)
 
@@ -112,6 +113,32 @@ print(isinstance(Lock(), AsyncContextLockProtocol)) # True
 ```
 
 If you use type hints and static verification tools like [mypy](https://github.com/python/mypy), we highly recommend using the narrowest applicable protocol for your use case.
+
+
+## Empty locks
+
+Sometimes a piece of code expects a lock, but in a particular case no synchronization is actually needed. Instead of branching on whether to lock, you can inject a lock that does nothing. `locklib` provides two such no-op locks: `EmptyLock` and its asynchronous counterpart `AsyncEmptyLock`. Their `acquire`/`release` methods and context-manager forms return immediately and never block:
+
+```python
+from locklib import EmptyLock
+
+lock = EmptyLock()
+
+with lock:
+    ...  # nothing is actually locked
+```
+
+```python
+from locklib import AsyncEmptyLock
+
+lock = AsyncEmptyLock()
+
+async def function():
+    async with lock:
+        ...  # nothing is actually locked
+```
+
+`EmptyLock` implements `ContextLockProtocol` and `AsyncEmptyLock` implements `AsyncContextLockProtocol` (and both implement `LockProtocol`), so each one is a drop-in substitute wherever the corresponding protocol is expected.
 
 
 ## `SmartLock` turns deadlocks into exceptions

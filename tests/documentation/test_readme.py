@@ -5,7 +5,9 @@ from threading import RLock as TRLock
 
 from locklib import (
     AsyncContextLockProtocol,
+    AsyncEmptyLock,
     ContextLockProtocol,
+    EmptyLock,
     LockProtocol,
     SmartLock,
 )
@@ -40,3 +42,23 @@ def test_almost_all_lock_are_context_locks():
 
 def test_asyncio_lock_is_async_context_lock():
     assert isinstance(ALock(), AsyncContextLockProtocol)
+
+
+def test_empty_lock_usage_and_protocols():
+    lock = EmptyLock()
+
+    with lock:
+        pass
+
+    assert isinstance(lock, LockProtocol)
+    assert isinstance(lock, ContextLockProtocol)
+
+
+async def test_async_empty_lock_usage_and_protocols():
+    lock = AsyncEmptyLock()
+
+    async with lock:
+        pass
+
+    assert isinstance(lock, LockProtocol)
+    assert isinstance(lock, AsyncContextLockProtocol)

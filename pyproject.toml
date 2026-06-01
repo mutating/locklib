@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'locklib'
-version = '0.0.21'
+version = '0.0.22'
 authors = [
   { name='Evgeniy Blinov', email='zheni-b@yandex.ru' },
 ]
@@ -52,6 +52,7 @@ format.quote-style = "single"
 
 [tool.pytest.ini_options]
 addopts = "-p no:warnings"
+asyncio_mode = "auto"
 
 [project.urls]
 'Source' = 'https://github.com/mutating/locklib'
