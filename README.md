@@ -114,6 +114,32 @@ print(isinstance(Lock(), AsyncContextLockProtocol)) # True
 If you use type hints and static verification tools like [mypy](https://github.com/python/mypy), we highly recommend using the narrowest applicable protocol for your use case.
 
 
+## Empty locks
+
+Sometimes a piece of code expects a lock, but in a particular case no synchronization is actually needed. Instead of branching on whether to lock, you can inject a lock that does nothing. `locklib` provides two such no-op locks: `EmptyLock` and its asynchronous counterpart `AsyncEmptyLock`. Their `acquire`/`release` methods and context-manager forms return immediately and never block:
+
+```python
+from locklib import EmptyLock
+
+lock = EmptyLock()
+
+with lock:
+    ...  # nothing is actually locked
+```
+
+```python
+from locklib import AsyncEmptyLock
+
+lock = AsyncEmptyLock()
+
+async def function():
+    async with lock:
+        ...  # nothing is actually locked
+```
+
+`EmptyLock` implements `ContextLockProtocol` and `AsyncEmptyLock` implements `AsyncContextLockProtocol` (and both implement `LockProtocol`), so each one is a drop-in substitute wherever the corresponding protocol is expected.
+
+
 ## `SmartLock` turns deadlocks into exceptions
 
 `locklib` includes a lock that prevents [deadlocks](https://en.wikipedia.org/wiki/Deadlock) — `SmartLock`, based on [Wait-for Graph](https://en.wikipedia.org/wiki/Wait-for_graph). You can use it like a regular [`Lock` from the standard library](https://docs.python.org/3/library/threading.html#lock-objects). Let’s verify that it prevents [race conditions](https://en.wikipedia.org/wiki/Race_condition) in the same way:
