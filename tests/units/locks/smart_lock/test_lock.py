@@ -9,6 +9,7 @@ from locklib import DeadLockError, SmartLock
 
 
 def test_release_unlocked():
+    """Releasing a fresh SmartLock raises RuntimeError with the exact unlocked-lock message."""
     lock = SmartLock()
 
     with pytest.raises(RuntimeError, match=match('Release unlocked lock.')):
@@ -16,6 +17,11 @@ def test_release_unlocked():
 
 
 def test_normal_using():
+    """
+    A single SmartLock supports normal contended context-manager use.
+
+    Several threads increment shared state under the lock, and the final count must include every increment.
+    """
     number_of_threads = 5
     number_of_attempts_per_thread = 100000
 
@@ -41,36 +47,53 @@ def test_normal_using():
 
 @pytest.mark.timeout(5)
 def test_raise_when_simple_deadlock():
+    """
+    SmartLock detects a two-thread, two-lock deadlock instead of blocking.
+
+    Each iteration runs opposite acquisition orders. Worker handlers collect unexpected exceptions so they fail the main test, and exactly one DeadLockError must be enough to let both threads finish.
+    """
     number_of_attempts = 50
 
     lock_1 = SmartLock()
     lock_2 = SmartLock()
 
-    queue = Queue()
-
     for _ in range(number_of_attempts):
         flag = False
-        def function_1():
+        deadlock_errors = []
+        unexpected_errors = []
+        result_lock = Lock()
+
+        def function_1(deadlock_errors=deadlock_errors, unexpected_errors=unexpected_errors, result_lock=result_lock):
             nonlocal flag
             try:
                 while True:
                     with lock_1, lock_2:
                         if flag:
                             break
-            except DeadLockError:
-                flag = True
-                queue.put(True)
+            except DeadLockError as error:
+                with result_lock:
+                    flag = True
+                    deadlock_errors.append(error)
+            except Exception as error:  # noqa: BLE001
+                with result_lock:
+                    flag = True
+                    unexpected_errors.append(error)
 
-        def function_2():
+        def function_2(deadlock_errors=deadlock_errors, unexpected_errors=unexpected_errors, result_lock=result_lock):
             nonlocal flag
             try:
                 while True:
                     with lock_2, lock_1:
                         if flag:
                             break
-            except DeadLockError:
-                flag = True
-                queue.put(True)
+            except DeadLockError as error:
+                with result_lock:
+                    flag = True
+                    deadlock_errors.append(error)
+            except Exception as error:  # noqa: BLE001
+                with result_lock:
+                    flag = True
+                    unexpected_errors.append(error)
 
         thread_1 = Thread(target=function_1)
         thread_2 = Thread(target=function_2)
@@ -80,11 +103,17 @@ def test_raise_when_simple_deadlock():
         thread_1.join()
         thread_2.join()
 
-        assert queue.get()
+        assert not unexpected_errors
+        assert len(deadlock_errors) == 1
 
 
 @pytest.mark.timeout(5)
 def test_raise_when_not_so_simple_deadlock():  # noqa: PLR0915
+    """
+    SmartLock reports a three-lock cyclic wait instead of hanging.
+
+    Each attempt starts three threads with rotated lock order; two DeadLockError signals are enough to break the cycle and let all threads finish.
+    """
     number_of_attempts = 50
 
     lock_1 = SmartLock()

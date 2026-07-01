@@ -22,6 +22,7 @@ from locklib import AsyncEmptyLock, ContextLockProtocol, EmptyLock, SmartLock
     ],
 )
 def test_locks_are_instances_of_context_lock_protocol(lock):  # type: ignore[no-untyped-def, unused-ignore]
+    """The listed standard locks, SmartLock, and EmptyLock satisfy ContextLockProtocol at runtime."""
     assert isinstance(lock, ContextLockProtocol)
 
 
@@ -38,6 +39,11 @@ def test_locks_are_instances_of_context_lock_protocol(lock):  # type: ignore[no-
     ],
 )
 def test_other_objects_are_not_instances_of_context_lock(other):  # type: ignore[no-untyped-def, unused-ignore]
+    """
+    Objects without the synchronous context-lock shape must not satisfy ContextLockProtocol.
+
+    Check unrelated values and an async-only lock shape to ensure runtime matching requires acquire/release plus __enter__/__exit__.
+    """
     assert not isinstance(other, ContextLockProtocol)
 
 
@@ -51,6 +57,11 @@ def test_asyncio_lock_is_not_just_context_lock():  # type: ignore[no-untyped-def
 
 
 def test_just_contextmanager_is_not_context_lock():  # type: ignore[no-untyped-def]
+    """
+    A plain synchronous context manager must not satisfy ContextLockProtocol.
+
+    It provides context-manager entry and exit but lacks acquire and release, which the runtime protocol check also requires.
+    """
     @contextmanager
     def context_manager():  # type: ignore[no-untyped-def]
         yield 'kek'
@@ -59,6 +70,7 @@ def test_just_contextmanager_is_not_context_lock():  # type: ignore[no-untyped-d
 
 
 def test_not_implemented_methods_for_context_lock_protocol():  # type: ignore[no-untyped-def]
+    """Inherited ContextLockProtocol methods on a minimal subclass raise the exact protocol misuse error."""
     class ContextLockProtocolImplementation(ContextLockProtocol):
         pass
 

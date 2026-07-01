@@ -13,12 +13,22 @@ async def test_acquire_does_not_raise():
 
 
 def test_release_returns_none_without_prior_acquire():
+    """
+    Release on an unacquired async empty lock returns None immediately.
+
+    The lock is stateless, so release does not require ownership, a prior acquire, or awaiting.
+    """
     lock = AsyncEmptyLock()
 
     assert lock.release() is None
 
 
 async def test_double_acquire_does_not_block():
+    """
+    AsyncEmptyLock acquire remains a non-blocking no-op across repeated awaits.
+
+    The same instance can be acquired twice without an intervening release, and the second acquire should complete immediately.
+    """
     lock = AsyncEmptyLock()
 
     await lock.acquire()
@@ -26,11 +36,21 @@ async def test_double_acquire_does_not_block():
 
 
 async def test_context_manager_binds_none():
+    """
+    An async empty lock context manager binds None on entry.
+
+    async with AsyncEmptyLock() as value should complete successfully without exposing the lock instance or a token.
+    """
     async with AsyncEmptyLock() as value:
         assert value is None
 
 
 async def test_nested_context_manager_does_not_deadlock():
+    """
+    AsyncEmptyLock supports nested async context manager use without blocking.
+
+    The same lock instance is entered twice with nested async with blocks, and both contexts must complete because the empty lock does not track ownership or held state.
+    """
     lock = AsyncEmptyLock()
 
     async with lock, lock:
@@ -38,6 +58,11 @@ async def test_nested_context_manager_does_not_deadlock():
 
 
 async def test_exception_inside_context_manager_propagates():
+    """
+    Exceptions raised inside an AsyncEmptyLock context are not suppressed.
+
+    Raise a ValueError inside the context and assert that a ValueError with the sentinel message is observed outside.
+    """
     lock = AsyncEmptyLock()
 
     with pytest.raises(ValueError, match='kek'):
@@ -46,6 +71,11 @@ async def test_exception_inside_context_manager_propagates():
 
 
 async def test_instance_is_reusable():
+    """
+    One AsyncEmptyLock instance stays reusable across sequential locking cycles.
+
+    The same object can mix explicit acquire/release calls and async context-manager use without retaining state between cycles.
+    """
     lock = AsyncEmptyLock()
 
     for _ in range(3):
