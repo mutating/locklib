@@ -187,7 +187,7 @@ def test_multiple_locked_events_in_100_threads():
     """
     Matching events are checked against each event's own thread lock span.
 
-    Start many threads that each acquire the wrapper once, emit many matching ACTION notifications inside that context, and release it; every matching action should be treated as locked.
+    Start many threads that each acquire the wrapper once, emit many matching ACTION notifications inside that context, and release it. The trace must contain every expected ACTION plus one ACQUIRE/RELEASE pair per thread before was_event_locked returns True.
     """
     wrapper = LockTraceWrapper(Lock())
 
@@ -204,6 +204,13 @@ def test_multiple_locked_events_in_100_threads():
     for thread in threads:
         thread.join()
 
+    action_events = [event for event in wrapper.trace if event.type == TracerEventType.ACTION and event.identifier == 'kek']
+    acquire_events = [event for event in wrapper.trace if event.type == TracerEventType.ACQUIRE]
+    release_events = [event for event in wrapper.trace if event.type == TracerEventType.RELEASE]
+
+    assert len(action_events) == 100 * 1000
+    assert len(acquire_events) == 100
+    assert len(release_events) == 100
     assert wrapper.was_event_locked('kek')
 
 
@@ -211,18 +218,28 @@ def test_multiple_locked_events_and_1_not_locked_in_100_threads():
     """
     Return False when any matching event is emitted without that thread acquiring the wrapper.
 
-    Many threads emit locked ACTION events; one thread emits the same identifier without entering the wrapper, so was_event_locked rejects the whole set.
+    Many threads emit locked ACTION events, while one thread emits the same identifier without entering the wrapper. Worker exceptions are collected first, so the final False result must come from the unlocked event rather than a failed worker.
     """
     wrapper = LockTraceWrapper(Lock())
+    unexpected_errors = []
+    errors_lock = Lock()
 
     def function_with_locked_events():
-        with wrapper:
-            for _ in range(1000):
-                wrapper.notify('kek')
-        sleep(0.1)
+        try:
+            with wrapper:
+                for _ in range(1000):
+                    wrapper.notify('kek')
+            sleep(0.1)
+        except Exception as error:  # noqa: BLE001
+            with errors_lock:
+                unexpected_errors.append(error)
 
     def function_with_not_locked_event():
-        wrapper.notify('kek')
+        try:
+            wrapper.notify('kek')
+        except Exception as error:  # noqa: BLE001
+            with errors_lock:
+                unexpected_errors.append(error)
 
     threads = [Thread(target=function_with_locked_events) for _ in range(100)]
     threads.append(Thread(target=function_with_not_locked_event))
@@ -232,6 +249,7 @@ def test_multiple_locked_events_and_1_not_locked_in_100_threads():
     for thread in threads:
         thread.join()
 
+    assert not unexpected_errors
     assert not wrapper.was_event_locked('kek')
 
 

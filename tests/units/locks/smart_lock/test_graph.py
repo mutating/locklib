@@ -89,9 +89,9 @@ def test_delete_non_existing_link():
 
 def test_detect_simple_cycle():
     """
-    Reject a direct wait-for cycle when adding the closing edge.
+    Reject a direct wait-for cycle without storing the closing edge.
 
-    After one link exists between two nodes, adding the reverse link would create a two-node cycle, so add_link must raise DeadLockError immediately.
+    After 1 -> 2 exists, adding 2 -> 1 would create a two-node cycle. add_link must raise DeadLockError, and 2's outgoing links must not include the rejected edge to 1.
     """
     graph = LocksGraph()
 
@@ -100,12 +100,14 @@ def test_detect_simple_cycle():
     with pytest.raises(DeadLockError):
         graph.add_link(2, 1)
 
+    assert 1 not in graph.get_links_from(2)
+
 
 def test_detect_difficult_cycle():
     """
-    Detect a long transitive cycle when a new graph link closes it.
+    Reject a long transitive cycle without storing the closing edge.
 
-    Build a chain from 1 through 9, then assert that adding 9 -> 1 raises DeadLockError rather than accepting the edge.
+    Build a chain from 1 through 9, then try to close it with 9 -> 1. add_link must raise DeadLockError, and 9's outgoing links must not include the rejected edge to 1.
     """
     graph = LocksGraph()
 
@@ -120,6 +122,8 @@ def test_detect_difficult_cycle():
 
     with pytest.raises(DeadLockError):
         graph.add_link(9, 1)
+
+    assert 1 not in graph.get_links_from(9)
 
 
 def test_simple_exception_message():
