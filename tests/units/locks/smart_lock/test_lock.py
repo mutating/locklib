@@ -9,6 +9,7 @@ from locklib import DeadLockError, SmartLock
 
 
 def test_release_unlocked():
+    """Releasing a fresh SmartLock raises RuntimeError with the exact unlocked-lock message."""
     lock = SmartLock()
 
     with pytest.raises(RuntimeError, match=match('Release unlocked lock.')):
@@ -16,6 +17,11 @@ def test_release_unlocked():
 
 
 def test_normal_using():
+    """
+    A single SmartLock supports normal contended context-manager use.
+
+    Several threads increment shared state under the lock, and the final count must include every increment.
+    """
     number_of_threads = 5
     number_of_attempts_per_thread = 100000
 
@@ -41,6 +47,11 @@ def test_normal_using():
 
 @pytest.mark.timeout(5)
 def test_raise_when_simple_deadlock():
+    """
+    SmartLock detects a two-thread, two-lock deadlock instead of blocking.
+
+    Each iteration runs opposite acquisition orders and requires DeadLockError to surface before the threads can finish.
+    """
     number_of_attempts = 50
 
     lock_1 = SmartLock()
@@ -85,6 +96,11 @@ def test_raise_when_simple_deadlock():
 
 @pytest.mark.timeout(5)
 def test_raise_when_not_so_simple_deadlock():  # noqa: PLR0915
+    """
+    SmartLock reports a three-lock cyclic wait instead of hanging.
+
+    Each attempt starts three threads with rotated lock order; two DeadLockError signals are enough to break the cycle and let all threads finish.
+    """
     number_of_attempts = 50
 
     lock_1 = SmartLock()
