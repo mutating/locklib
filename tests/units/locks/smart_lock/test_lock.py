@@ -6,6 +6,12 @@ import pytest
 from full_match import match
 
 from locklib import DeadLockError, SmartLock
+from locklib.locks.smart_lock.abstract import AbstractSmartLock
+
+
+def test_smart_lock_is_abstract_smart_lock_subclass():
+    """SmartLock keeps AbstractSmartLock as its base implementation."""
+    assert issubclass(SmartLock, AbstractSmartLock)
 
 
 def test_release_unlocked():
