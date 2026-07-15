@@ -70,13 +70,14 @@ from multiprocessing import Lock as MLock
 from threading import Lock as TLock, RLock as TRLock
 from asyncio import Lock as ALock
 
-from locklib import SmartLock, LockProtocol
+from locklib import SmartLock, SmartRLock, LockProtocol
 
 print(isinstance(MLock(), LockProtocol)) # True
 print(isinstance(TLock(), LockProtocol)) # True
 print(isinstance(TRLock(), LockProtocol)) # True
 print(isinstance(ALock(), LockProtocol)) # True
 print(isinstance(SmartLock(), LockProtocol)) # True
+print(isinstance(SmartRLock(), LockProtocol)) # True
 ```
 
 However, most idiomatic Python code uses locks as context managers. If your code does too, you can use one of the two protocols derived from the base `LockProtocol`: `ContextLockProtocol` or `AsyncContextLockProtocol`. Thus, the protocol hierarchy looks like this:
@@ -89,18 +90,19 @@ LockProtocol
 
 `ContextLockProtocol` describes objects that satisfy `LockProtocol` and also implement the [context manager protocol](https://docs.python.org/3/library/stdtypes.html#typecontextmanager). Similarly,`AsyncContextLockProtocol` describes objects that satisfy `LockProtocol` and implement the [asynchronous context manager](https://docs.python.org/3/reference/datamodel.html#async-context-managers) protocol.
 
-Almost all standard library locks, as well as `SmartLock`, satisfy `ContextLockProtocol`:
+Almost all standard library locks, as well as `SmartLock` and `SmartRLock`, satisfy `ContextLockProtocol`:
 
 ```python
 from multiprocessing import Lock as MLock
 from threading import Lock as TLock, RLock as TRLock
 
-from locklib import SmartLock, ContextLockProtocol
+from locklib import SmartLock, SmartRLock, ContextLockProtocol
 
 print(isinstance(MLock(), ContextLockProtocol)) # True
 print(isinstance(TLock(), ContextLockProtocol)) # True
 print(isinstance(TRLock(), ContextLockProtocol)) # True
 print(isinstance(SmartLock(), ContextLockProtocol)) # True
+print(isinstance(SmartRLock(), ContextLockProtocol)) # True
 ```
 
 However, the [`asyncio.Lock`](https://docs.python.org/3/library/asyncio-sync.html#asyncio.Lock) belongs to a separate category and `AsyncContextLockProtocol` is needed to describe it:
@@ -209,6 +211,29 @@ If you want to catch this exception, you can also import it from `locklib`:
 from locklib import DeadLockError
 ```
 
+`SmartLock` is deliberately not recursive: acquiring the same instance twice from the same thread raises `DeadLockError`. When recursive ownership is needed, use `SmartRLock` instead. It keeps the same deadlock detection for waits between threads, but lets the owning thread enter the same lock repeatedly:
+
+```python
+from locklib import SmartRLock
+
+lock = SmartRLock()
+
+with lock, lock:
+    pass
+```
+
+If you use explicit `acquire()` and `release()` calls, every successful acquire must have a matching release:
+
+```python
+from locklib import SmartRLock
+
+lock = SmartRLock()
+
+lock.acquire()
+lock.acquire()
+lock.release()
+lock.release()
+```
 
 ## Test your locks
 

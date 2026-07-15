@@ -10,6 +10,7 @@ from locklib.locks.empty.async_empty_lock import (
 )
 from locklib.locks.empty.empty_lock import EmptyLock as EmptyLock
 from locklib.locks.smart_lock.lock import SmartLock as SmartLock
+from locklib.locks.smart_lock.rlock import SmartRLock as SmartRLock
 from locklib.locks.tracer.tracer import (
     LockTraceWrapper as LockTraceWrapper,
 )

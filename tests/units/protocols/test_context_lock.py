@@ -8,7 +8,13 @@ from threading import RLock as TRLock
 import pytest
 from full_match import match
 
-from locklib import AsyncEmptyLock, ContextLockProtocol, EmptyLock, SmartLock
+from locklib import (
+    AsyncEmptyLock,
+    ContextLockProtocol,
+    EmptyLock,
+    SmartLock,
+    SmartRLock,
+)
 
 
 @pytest.mark.parametrize(
@@ -18,6 +24,7 @@ from locklib import AsyncEmptyLock, ContextLockProtocol, EmptyLock, SmartLock
         TLock(),
         TRLock(),
         SmartLock(),
+        SmartRLock(),
         EmptyLock(),
     ],
 )
@@ -95,4 +102,5 @@ def tests_for_type_checking():  # type: ignore[no-untyped-def]
     some_function(TLock())
     some_function(TRLock())
     some_function(SmartLock())
+    some_function(SmartRLock())
     some_function(EmptyLock())

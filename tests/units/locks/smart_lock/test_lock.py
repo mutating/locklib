@@ -1,203 +1,168 @@
-from queue import Queue
-from threading import Lock, Thread
-from time import sleep
+from threading import Event, Lock, Thread, get_native_id
+from time import monotonic
+from typing import List, Type
 
 import pytest
 from full_match import match
 
-from locklib import DeadLockError, SmartLock
+from locklib import DeadLockError, SmartLock, SmartRLock
+from locklib.locks.smart_lock.abstract import AbstractSmartLock
+from locklib.locks.smart_lock.graph import LocksGraph
 
 
-def test_release_unlocked():
-    """Releasing a fresh SmartLock raises RuntimeError with the exact unlocked-lock message."""
+@pytest.mark.timeout(5)
+def test_smart_lock_raises_on_recursive_acquire_instead_of_hanging() -> None:
+    """SmartLock rejects recursive acquire without hanging, remains reusable, and rejects recursion again."""
     lock = SmartLock()
+    unexpected_errors: List[Exception] = []
 
-    with pytest.raises(RuntimeError, match=match('Release unlocked lock.')):
-        lock.release()
+    def verify_recursive_acquire_rejections() -> None:
+        try:
+            thread_id = get_native_id()
+            expected_message = f'A cycle between {thread_id}th and {thread_id}th threads has been detected.'
+
+            for _ in range(2):
+                lock.acquire()
+
+                with pytest.raises(DeadLockError, match=match(expected_message)):
+                    lock.acquire()
+
+                lock.release()
+        except Exception as error:  # noqa: BLE001
+            unexpected_errors.append(error)
+
+    thread = Thread(target=verify_recursive_acquire_rejections, daemon=True)
+    thread.start()
+    thread.join(2)
+
+    assert not thread.is_alive()
+    if unexpected_errors:
+        raise AssertionError(f'Unexpected worker exceptions: {unexpected_errors!r}') from unexpected_errors[0]
 
 
-def test_normal_using():
-    """
-    A single SmartLock supports normal contended context-manager use.
+@pytest.mark.timeout(5)
+def test_smart_lock_recursive_acquire_error_preserves_lock_and_graph_state() -> None:
+    """SmartLock recursive-acquire errors preserve reusable lock and graph state."""
+    graph = LocksGraph()
+    lock = SmartLock(local_graph=graph)
+    unexpected_errors: List[Exception] = []
 
-    Several threads increment shared state under the lock, and the final count must include every increment.
-    """
-    number_of_threads = 5
-    number_of_attempts_per_thread = 100000
+    def exercise_recursive_acquire_recovery() -> None:
+        try:
+            thread_id = get_native_id()
+            expected_message = f'A cycle between {thread_id}th and {thread_id}th threads has been detected.'
 
-    lock = SmartLock()
-    index = 0
+            lock.acquire()
 
-    def function() -> None:
-        nonlocal index
+            with pytest.raises(DeadLockError, match=match(expected_message)):
+                lock.acquire()
 
-        for _ in range(number_of_attempts_per_thread):
-            with lock:
-                index += 1
+            lock.release()
+            with lock.lock:
+                assert not lock.deque
+                assert not lock.local_locks
+                assert not lock.recursion_depths
 
-    threads = [Thread(target=function) for _ in range(number_of_threads)]
+            lock.acquire()
+            lock.release()
+        except Exception as error:  # noqa: BLE001
+            unexpected_errors.append(error)
+
+    thread = Thread(target=exercise_recursive_acquire_recovery, daemon=True)
+    thread.start()
+    thread.join(2)
+
+    assert not thread.is_alive()
+    if unexpected_errors:
+        raise AssertionError(f'Unexpected worker exceptions: {unexpected_errors!r}') from unexpected_errors[0]
+    assert not graph.links
+    with lock.lock:
+        assert not lock.deque
+        assert not lock.local_locks
+        assert not lock.recursion_depths
+
+
+@pytest.mark.parametrize(
+    ('first_lock_class', 'second_lock_class'),
+    [
+        (SmartLock, SmartRLock),
+        (SmartRLock, SmartLock),
+    ],
+)
+@pytest.mark.timeout(10)
+def test_mixed_smart_lock_and_smart_rlock_detect_deadlock(first_lock_class: Type[AbstractSmartLock], second_lock_class: Type[AbstractSmartLock]) -> None:  # noqa: PLR0915
+    """SmartLock and SmartRLock share an explicit local graph and detect a two-lock deadlock in either order."""
+    graph = LocksGraph()
+    lock_1 = first_lock_class(local_graph=graph)
+    lock_2 = second_lock_class(local_graph=graph)
+    deadline = monotonic() + 2.5
+    first_lock_acquired_events = [Event(), Event()]
+    request_second_lock_event = Event()
+    result_lock = Lock()
+    deadlock_errors: List[DeadLockError] = []
+    unexpected_errors: List[Exception] = []
+
+    def acquire_locks(owned_lock: AbstractSmartLock, requested_lock: AbstractSmartLock, first_lock_acquired_event: Event) -> None:
+        owns_first_lock = False
+        owns_second_lock = False
+
+        try:
+            owned_lock.acquire()
+            owns_first_lock = True
+            first_lock_acquired_event.set()
+
+            if not request_second_lock_event.wait(max(deadline - monotonic(), 0.01)):
+                raise TimeoutError('Coordinator did not release second-lock attempt.')
+
+            requested_lock.acquire()
+            owns_second_lock = True
+        except DeadLockError as error:
+            with result_lock:
+                deadlock_errors.append(error)
+        except Exception as error:  # noqa: BLE001
+            with result_lock:
+                unexpected_errors.append(error)
+        finally:
+            try:
+                if owns_second_lock:
+                    requested_lock.release()
+                if owns_first_lock:
+                    owned_lock.release()
+            except Exception as error:  # noqa: BLE001
+                with result_lock:
+                    unexpected_errors.append(error)
+
+    threads = [
+        Thread(target=acquire_locks, args=(lock_1, lock_2, first_lock_acquired_events[0]), daemon=True),
+        Thread(target=acquire_locks, args=(lock_2, lock_1, first_lock_acquired_events[1]), daemon=True),
+    ]
 
     for thread in threads:
         thread.start()
-    for thread in threads:
-        thread.join()
 
-    assert index == number_of_threads * number_of_attempts_per_thread
+    all_threads_ready = False
+    try:
+        all_threads_ready = all(event.wait(max(deadline - monotonic(), 0.01)) for event in first_lock_acquired_events)
+    finally:
+        request_second_lock_event.set()
+        for thread in threads:
+            thread.join(1)
 
+    if unexpected_errors:
+        raise AssertionError(f'Unexpected worker exceptions: {unexpected_errors!r}') from unexpected_errors[0]
+    assert all_threads_ready
+    assert all(not thread.is_alive() for thread in threads)
+    assert len(deadlock_errors) == 1
+    assert all(not links for links in graph.links.values())
 
-@pytest.mark.timeout(5)
-def test_raise_when_simple_deadlock():
-    """
-    SmartLock detects a two-thread, two-lock deadlock instead of blocking.
-
-    Each iteration runs opposite acquisition orders. Worker handlers collect unexpected exceptions so they fail the main test, and exactly one DeadLockError must be enough to let both threads finish.
-    """
-    number_of_attempts = 50
-
-    lock_1 = SmartLock()
-    lock_2 = SmartLock()
-
-    for _ in range(number_of_attempts):
-        flag = False
-        deadlock_errors = []
-        unexpected_errors = []
-        result_lock = Lock()
-
-        def function_1(deadlock_errors=deadlock_errors, unexpected_errors=unexpected_errors, result_lock=result_lock):
-            nonlocal flag
-            try:
-                while True:
-                    with lock_1, lock_2:
-                        if flag:
-                            break
-            except DeadLockError as error:
-                with result_lock:
-                    flag = True
-                    deadlock_errors.append(error)
-            except Exception as error:  # noqa: BLE001
-                with result_lock:
-                    flag = True
-                    unexpected_errors.append(error)
-
-        def function_2(deadlock_errors=deadlock_errors, unexpected_errors=unexpected_errors, result_lock=result_lock):
-            nonlocal flag
-            try:
-                while True:
-                    with lock_2, lock_1:
-                        if flag:
-                            break
-            except DeadLockError as error:
-                with result_lock:
-                    flag = True
-                    deadlock_errors.append(error)
-            except Exception as error:  # noqa: BLE001
-                with result_lock:
-                    flag = True
-                    unexpected_errors.append(error)
-
-        thread_1 = Thread(target=function_1)
-        thread_2 = Thread(target=function_2)
-        thread_1.start()
-        thread_2.start()
-
-        thread_1.join()
-        thread_2.join()
-
-        assert not unexpected_errors
-        assert len(deadlock_errors) == 1
-
-
-@pytest.mark.timeout(5)
-def test_raise_when_not_so_simple_deadlock():  # noqa: PLR0915
-    """
-    SmartLock reports a three-lock cyclic wait instead of hanging.
-
-    Each attempt starts three threads with rotated lock order; two DeadLockError signals are enough to break the cycle and let all threads finish.
-    """
-    number_of_attempts = 50
-
-    lock_1 = SmartLock()
-    lock_2 = SmartLock()
-    lock_3 = SmartLock()
-
-    queue = Queue()
-
-    for _ in range(number_of_attempts):
-        flag = False
-        cycles = 0
-        lock = Lock()
-        def function_1():
-            nonlocal flag
-            nonlocal cycles
-            try:
-                while True:
-                    with lock_1:
-                        sleep(0.0001)
-                        with lock_2:
-                            sleep(0.0001)
-                            with lock_3:
-                                if flag:
-                                    break
-            except DeadLockError:
-                with lock:  # noqa: B023
-                    cycles += 1
-                    if cycles == 2:
-                        flag = True
-                queue.put(True)
-
-        def function_2():
-            nonlocal flag
-            nonlocal cycles
-            try:
-                while True:
-                    with lock_2:
-                        sleep(0.0001)
-                        with lock_3:
-                            sleep(0.0001)
-                            with lock_1:
-                                if flag:
-                                    break
-            except DeadLockError:
-                with lock:  # noqa: B023
-                    cycles += 1
-                    if cycles == 2:
-                        flag = True
-                queue.put(True)
-
-        def function_3():
-            nonlocal flag
-            nonlocal cycles
-            try:
-                while True:
-                    with lock_3:
-                        sleep(0.0001)
-                        with lock_1:
-                            sleep(0.0001)
-                            with lock_2:
-                                if flag:
-                                    break
-            except DeadLockError:
-                with lock:  # noqa: B023
-                    cycles += 1
-                    if cycles == 2:
-                        flag = True
-                queue.put(True)
-
-        thread_1 = Thread(target=function_1)
-        thread_2 = Thread(target=function_2)
-        thread_3 = Thread(target=function_3)
-        thread_1.start()
-        thread_2.start()
-        thread_3.start()
-
-        thread_1.join()
-        thread_2.join()
-        thread_3.join()
-
-        counter = 0
-
-        for _ in range(2):
-            queue.get()
-            counter += 1
-
-        assert counter == 2
+    for lock in (lock_1, lock_2):
+        with lock.lock:
+            assert not lock.deque
+            assert not lock.local_locks
+            assert not lock.recursion_depths
+        lock.acquire()
+        lock.release()
+        with lock.lock:
+            assert not lock.deque
+            assert not lock.local_locks
+            assert not lock.recursion_depths

@@ -1,5 +1,5 @@
 from locklib.locks.smart_lock.abstract import AbstractSmartLock
 
 
-class SmartLock(AbstractSmartLock):
-    recursive = False
+class SmartRLock(AbstractSmartLock):
+    recursive = True
