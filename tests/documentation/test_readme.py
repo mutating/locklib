@@ -10,20 +10,22 @@ from locklib import (
     EmptyLock,
     LockProtocol,
     SmartLock,
+    SmartRLock,
 )
 
 
 def test_lock_protocols_basic():
     """
-    The README lock examples satisfy LockProtocol at runtime.
+    The basic lock protocol example objects satisfy LockProtocol at runtime.
 
-    This checks multiprocessing.Lock, threading.Lock, threading.RLock, asyncio.Lock, and SmartLock by protocol membership, without exercising locking behavior.
+    This checks multiprocessing.Lock, threading.Lock, threading.RLock, asyncio.Lock, SmartLock, and SmartRLock by protocol membership, without exercising locking behavior.
     """
     assert isinstance(MLock(), LockProtocol)
     assert isinstance(TLock(), LockProtocol)
     assert isinstance(TRLock(), LockProtocol)
     assert isinstance(ALock(), LockProtocol)
     assert isinstance(SmartLock(), LockProtocol)
+    assert isinstance(SmartRLock(), LockProtocol)
 
 
 def test_inheritance_order():
@@ -42,12 +44,31 @@ def test_almost_all_lock_are_context_locks():
     """
     ContextLockProtocol describes the listed synchronous locks as context-manager locks.
 
-    The README smoke test checks multiprocessing.Lock, threading.Lock, threading.RLock, and SmartLock by runtime protocol membership without exercising their locking behavior.
+    This checks multiprocessing.Lock, threading.Lock, threading.RLock, SmartLock, and SmartRLock by runtime protocol membership without exercising their locking behavior.
     """
     assert isinstance(MLock(), ContextLockProtocol)
     assert isinstance(TLock(), ContextLockProtocol)
     assert isinstance(TRLock(), ContextLockProtocol)
     assert isinstance(SmartLock(), ContextLockProtocol)
+    assert isinstance(SmartRLock(), ContextLockProtocol)
+
+
+def test_smart_rlock_nested_context_manager_readme_example():
+    """The SmartRLock context-manager example can enter the same lock recursively."""
+    lock = SmartRLock()
+
+    with lock, lock:
+        pass
+
+
+def test_smart_rlock_explicit_acquire_release_readme_example():
+    """The SmartRLock explicit acquire example matches two acquires with two releases."""
+    lock = SmartRLock()
+
+    lock.acquire()
+    lock.acquire()
+    lock.release()
+    lock.release()
 
 
 def test_asyncio_lock_is_async_context_lock():
