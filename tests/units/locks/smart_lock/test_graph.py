@@ -6,9 +6,9 @@ from locklib.locks.smart_lock.graph import LocksGraph
 
 def test_multiple_set_and_get():
     """
-    LocksGraph preserves multiple outgoing links from one source.
+    LocksGraph returns all outgoing links for a source and empty sets for nodes without outgoing links.
 
-    After several add_link calls from the same source, get_links_from returns the full adjacency set. Missing nodes and nodes that only appear as destinations return an empty set.
+    After adding 1 -> {2, 3, 4}, get_links_from returns all three targets for 1 and empty sets for destination-only node 2 and absent node 5. Looking up 5 leaves the adjacency map unchanged.
     """
     graph = LocksGraph()
 
@@ -19,8 +19,34 @@ def test_multiple_set_and_get():
     assert graph.get_links_from(1) == {2, 3, 4}
 
     assert graph.get_links_from(2) == set()
-
     assert graph.get_links_from(5) == set()
+    assert graph.links == {1: {2, 3, 4}}
+
+
+def test_get_links_from_destination_only_node_does_not_create_entry():
+    """
+    Looking up outgoing links for a node that only appears as an edge destination does not create an adjacency entry.
+
+    After adding 1 -> 2, get_links_from returns an empty set for 2 while preserving 1 -> 2 as the graph's only stored adjacency entry.
+    """
+    graph = LocksGraph()
+
+    graph.add_link(1, 2)
+
+    assert graph.get_links_from(2) == set()
+    assert graph.links == {1: {2}}
+
+
+def test_search_cycles_does_not_create_empty_nodes():
+    """
+    Searching from a missing source does not create an adjacency entry.
+
+    On an empty graph, search_cycles(1, 2) returns None and leaves the adjacency map empty.
+    """
+    graph = LocksGraph()
+
+    assert graph.search_cycles(1, 2) is None
+    assert graph.links == {}
 
 
 def test_reverse_deleting_of_nodes():

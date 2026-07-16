@@ -61,6 +61,52 @@ def test_abstract_smart_lock_subclass_protects_shared_state(smartlock_class: Typ
     assert counter == number_of_threads * number_of_increments_per_thread
 
 
+@pytest.mark.timeout(5)
+def test_abstract_smart_lock_subclass_cleans_wait_for_graph_after_contention(smartlock_class: Type[AbstractSmartLock]) -> None:
+    """
+    Every public AbstractSmartLock subclass cleans up its wait-for graph after contention.
+
+    While the test thread holds the lock, a queued waiter creates the expected waiter-to-owner edge. After the owner releases and the waiter finishes, the lock queue and dedicated wait-for graph are empty.
+    """
+    graph = LocksGraph()
+    lock = smartlock_class(local_graph=graph)
+    unexpected_errors: List[Exception] = []
+
+    def waiter() -> None:
+        try:
+            with lock:
+                pass
+        except Exception as error:  # noqa: BLE001
+            unexpected_errors.append(error)
+
+    waiter_thread = Thread(target=waiter, daemon=True)
+
+    try:
+        with lock:
+            waiter_thread.start()
+            deadline = monotonic() + 1
+
+            while True:
+                with lock.lock, graph.lock:
+                    if len(lock.deque) == 2:
+                        waiter_thread_id, owner_thread_id = lock.deque
+                        assert graph.links == {waiter_thread_id: {owner_thread_id}}
+                        break
+                if monotonic() >= deadline:
+                    raise AssertionError('Waiter did not enter the lock queue.')
+                sleep(0.001)
+    finally:
+        if waiter_thread.ident is not None:
+            waiter_thread.join(1)
+
+    assert not waiter_thread.is_alive()
+    if unexpected_errors:
+        raise AssertionError(f'Unexpected worker exceptions: {unexpected_errors!r}') from unexpected_errors[0]
+    with lock.lock:
+        assert not lock.deque
+    assert graph.links == {}
+
+
 @pytest.mark.timeout(10)
 def test_abstract_smart_lock_subclass_detects_simple_deadlock(smartlock_class: Type[AbstractSmartLock]) -> None:  # noqa: PLR0915
     """Every public AbstractSmartLock subclass breaks a two-thread deadlock with one DeadLockError and graph cleanup."""
