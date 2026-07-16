@@ -30,7 +30,7 @@ class LocksGraph:
                 del self.links[_from]
 
     def get_links_from(self, _from: int) -> Set[int]:
-        return self.links[_from]
+        return self.links.get(_from, set())
 
     def dfs(self, path: List[int], current_node: int, target: int) -> Optional[List[int]]:
         path.append(current_node)
