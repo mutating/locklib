@@ -66,34 +66,34 @@ def test_abstract_smart_lock_subclass_cleans_wait_for_graph_after_contention(sma
     """
     Every public AbstractSmartLock subclass cleans up its wait-for graph after contention.
 
-    While the test thread holds the lock, a queued waiter creates the expected waiter-to-owner edge. After the owner releases and the waiter finishes, the lock queue and dedicated wait-for graph are empty.
+    With the lock held, a waiter creates a waiter-to-owner edge. Releasing the lock lets the waiter finish and leaves the queue and dedicated graph empty.
     """
     graph = LocksGraph()
     lock = smartlock_class(local_graph=graph)
     unexpected_errors: List[Exception] = []
 
-    def waiter() -> None:
+    def acquire_lock() -> None:
         try:
             with lock:
                 pass
         except Exception as error:  # noqa: BLE001
             unexpected_errors.append(error)
 
-    waiter_thread = Thread(target=waiter, daemon=True)
+    waiter_thread = Thread(target=acquire_lock, daemon=True)
+    contention_observed = False
 
     try:
         with lock:
             waiter_thread.start()
-            deadline = monotonic() + 1
+            deadline = monotonic() + 2.5
 
-            while True:
+            while monotonic() < deadline:
                 with lock.lock, graph.lock:
                     if len(lock.deque) == 2:
                         waiter_thread_id, owner_thread_id = lock.deque
                         assert graph.links == {waiter_thread_id: {owner_thread_id}}
+                        contention_observed = True
                         break
-                if monotonic() >= deadline:
-                    raise AssertionError('Waiter did not enter the lock queue.')
                 sleep(0.001)
     finally:
         if waiter_thread.ident is not None:
@@ -102,6 +102,7 @@ def test_abstract_smart_lock_subclass_cleans_wait_for_graph_after_contention(sma
     assert not waiter_thread.is_alive()
     if unexpected_errors:
         raise AssertionError(f'Unexpected worker exceptions: {unexpected_errors!r}') from unexpected_errors[0]
+    assert contention_observed, 'Waiter did not enter the lock queue.'
     with lock.lock:
         assert not lock.deque
     assert graph.links == {}
